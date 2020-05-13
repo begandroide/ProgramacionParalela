@@ -14,11 +14,13 @@ typedef struct arg_struct {
 
 // global
 int g = 0;
+static Grid* grid = NULL;
 
 void *threadFun(void* argTh){
     CustomArgs *num = (CustomArgs*)argTh;
     // int *num = (int*)argTh;
     static int s = 0;
+    printf("je-> %d\n", grid->rows);
     ++s;++g;
     printf("{ [ID: %d], %d, %d, %d, %d}\n",
         num->id,num->initialIndexRow,num->finishIndexRow,
@@ -42,7 +44,7 @@ int main(int argc, char **argv){
     
     // read file
 	FILE *fp = fopen(filename, "r");
-	Grid *grid = life_load_board(fp);
+	grid = life_load_board(fp);
 	fclose(fp);
 
 	// simulation
