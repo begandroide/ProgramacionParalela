@@ -16,12 +16,10 @@ typedef struct arg_struct {
 int g = 0;
 static Grid* grid = NULL;
 
+pthread_mutex_t *mutexes;
+
 void *threadFun(void* argTh){
     CustomArgs *num = (CustomArgs*)argTh;
-    // int *num = (int*)argTh;
-    static int s = 0;
-    printf("je-> %d\n", grid->rows);
-    ++s;++g;
     printf("{ [ID: %d], %d, %d, %d, %d}\n",
         num->id,num->initialIndexRow,num->finishIndexRow,
         num->initialIndexCol,num->finishIndexCol);
@@ -35,6 +33,7 @@ int main(int argc, char **argv){
 		exit(1);
 	}
 
+
 	const char *filename = argv[1];
 	int numgens = atoi(argv[2]);
 	int N = atoi(argv[3]);  // number of rows of processes
@@ -46,6 +45,13 @@ int main(int argc, char **argv){
 	FILE *fp = fopen(filename, "r");
 	grid = life_load_board(fp);
 	fclose(fp);
+
+    //inicializar mutexs
+    int elem = grid->cols*grid->rows;
+    mutexes = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t)*elem);
+    for(int ii = 0; ii < elem; ii++){
+        pthread_mutex_init(&mutexes[ii], 0);
+    }
 
 	// simulation
 	for (int i = 0; i < numgens; i++) {
