@@ -5,9 +5,11 @@
 #include "life.h"
 
 typedef struct arg_struct {
-    int arg1;
-    int arg2;
-    int arg3;
+    int id;
+    int initialIndexRow;
+    int finishIndexRow;
+    int initialIndexCol;
+    int finishIndexCol;
 } CustomArgs;
 
 // global
@@ -18,7 +20,9 @@ void *threadFun(void* argTh){
     // int *num = (int*)argTh;
     static int s = 0;
     ++s;++g;
-    printf("Thread ID:%d, arg2: %d, Global: %d\n",num->arg1,num->arg2,num->arg3);
+    printf("{ [ID: %d], %d, %d, %d, %d}\n",
+        num->id,num->initialIndexRow,num->finishIndexRow,
+        num->initialIndexCol,num->finishIndexCol);
     
     pthread_exit(NULL);
 }
@@ -48,17 +52,28 @@ int main(int argc, char **argv){
 	}
     int i;
     pthread_t tid[numbThreads];
+
+    int actualRow = 0;
+    int actualCol = 0;
+    int loadWorkRow = grid->rows / N;
+    int loadWorkCol = grid->cols / M;
     for(int i = 0; i < numbThreads; i++){
+        
+        int tmpFinishIndexRow = actualRow + loadWorkRow;
+        int tmpFinishIndexCol = actualCol + loadWorkCol;
+
         CustomArgs *arrfs = (CustomArgs*)malloc(sizeof(CustomArgs));
-        arrfs->arg1 = i;
-        arrfs->arg2 = grid->cols/M;
-        arrfs->arg3 = grid->rows/N;
-        // printf("Creando thread -> %d",i);
+        arrfs->id = i;
+        arrfs->initialIndexRow = actualRow;
+        arrfs->finishIndexRow = tmpFinishIndexRow;
+        arrfs->initialIndexCol = actualCol;
+        arrfs->finishIndexCol = tmpFinishIndexCol;
         pthread_create(&tid[i],NULL,threadFun,(void*)arrfs);
+        
+        // actualRow = tmpFinishIndexRow;
+        actualCol = tmpFinishIndexCol;
     }
-    for(int i = 0; i < numbThreads; i++){
-        pthread_join(tid[i],NULL);
-    }     
+    for(int i = 0; i < numbThreads; i++) pthread_join(tid[i],NULL);
 
 	// print result
 	life_save_board(stdout, grid);
