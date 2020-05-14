@@ -16,14 +16,25 @@ typedef struct arg_struct {
 int g = 0;
 static Grid* grid = NULL;
 
-pthread_mutex_t *mutexes;
+// pthread_mutex_t *mutexes;
 
 void *threadFun(void* argTh){
     CustomArgs *num = (CustomArgs*)argTh;
     printf("{ [ID: %d], %d, %d, %d, %d}\n",
         num->id,num->initialIndexRow,num->finishIndexRow,
         num->initialIndexCol,num->finishIndexCol);
+    int numberRows = num->finishIndexRow - num->initialIndexRow;
+    int numberCols = num->finishIndexCol - num->initialIndexCol;
     
+    Grid* gridThread = grid_alloc(numberRows, numberCols + 1); // sumamos padding en col
+    // setear valores a grilla
+    for(int i = num->initialIndexRow; i < numberRows; i++){
+        for(int j = num->initialIndexCol; j < num->finishIndexCol; j++){
+            uint8_t val = grid_get_current(grid, i, j);
+            grid_set_current(gridThread, i, j, val);
+        }
+    }
+
     pthread_exit(NULL);
 }
 
@@ -47,11 +58,11 @@ int main(int argc, char **argv){
 	fclose(fp);
 
     //inicializar mutexs
-    int elem = grid->cols*grid->rows;
-    mutexes = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t)*elem);
-    for(int ii = 0; ii < elem; ii++){
-        pthread_mutex_init(&mutexes[ii], 0);
-    }
+    // int elem = grid->cols*grid->rows;
+    // mutexes = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t)*elem);
+    // for(int ii = 0; ii < elem; ii++){
+    //     pthread_mutex_init(&mutexes[ii], 0);
+    // }
 
 	// simulation
 	for (int i = 0; i < numgens; i++) {

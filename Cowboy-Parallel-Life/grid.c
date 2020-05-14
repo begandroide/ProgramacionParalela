@@ -43,6 +43,13 @@ uint8_t grid_get_current(Grid *grid, int row, int col)
 	return grid->buf1[position];
 }
 
+void grid_set_current(Grid *grid, int row, int col, uint8_t data)
+{
+	int cols = grid->cols;
+	int position = cols*(row) + col;
+	grid->buf1[position] = data;
+}
+
 void grid_set_next(Grid *grid, int row, int col, uint8_t val)
 {
 	int cols = grid->cols;
