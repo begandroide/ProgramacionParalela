@@ -16,13 +16,13 @@ typedef struct arg_struct {
 } CustomArgs;
 
 // global
+static int numGens = 0;
 static Grid* grid = NULL;
 pthread_mutex_t *mutexes;
 
 void *threadFun(void* argTh){
     CustomArgs *num = (CustomArgs*)argTh;
 
-    printf("{ [ID: %d], %d, %d, %d, %d}\n", num->id,num->initialIndexRow,num->finishIndexRow, num->initialIndexCol,num->finishIndexCol);
     int numberRows = num->finishIndexRow - num->initialIndexRow;
     int numberCols = num->finishIndexCol - num->initialIndexCol;
     bool hasLeftNeighbor = false;
@@ -42,6 +42,7 @@ void *threadFun(void* argTh){
         hasLeftNeighbor = true;
         num->initialIndexCol--;
     }
+    // TODO
     // if (num->initialIndexRow == 0){
     //     //no tiene vecinos arriba
     // } else {
@@ -50,7 +51,7 @@ void *threadFun(void* argTh){
 
     Grid* gridThread = grid_alloc(numberRows, numberCols); // sumamos padding en col
     // setear valores a grilla
-    for(int i = num->initialIndexRow; i < numberRows; i++){
+    for(int i = num->initialIndexRow; i < num->initialIndexRow + numberRows; i++){
         for(int j = num->initialIndexCol; j < ( num->initialIndexCol + numberCols); j++){
             int tmpIndexJ = j - num->initialIndexCol;
             uint8_t val = grid_get_current(grid, i, j);
@@ -60,86 +61,54 @@ void *threadFun(void* argTh){
             }
 
             grid_set_current(gridThread, i, tmpIndexJ, val);
-            // if (hasRightNeighbor) {
-            //     printf("tiene vecino der\n");
-            //     if ( (j+1) == num->finishIndexCol ) {
-            //         printf("padding-index: %d\n", i*(numberCols) + j +1 );
-            //         int retVal = pthread_mutex_trylock(&mutexes[i*(num->finishIndexCol+1)]);
-            //         if (retVal == 0) {
-            //             printf("retVal -> %d\n", retVal);
-            //         } else if (retVal == EBUSY) {
-            //             printf("EBUSY\n");
-
-            //         } else if (retVal == EINVAL){
-            //             printf("EINVAL\n");
-
-            //         } else if (retVal == EFAULT){
-            //             printf("EFAULT\n");
-            //         }
-            //     } else {
-            //         uint8_t val = grid_get_current(grid, i, j);
-            //         grid_set_current(gridThread, i, j, val);
-            //     }
-
-            // } else if(hasLeftNeighbor) {
-            //     printf("tiene vecino izq\n");
-            //     if ( j == num->initialIndexCol) {
-            //         printf("padding-index: %d\n", i*(numberCols));
-            //         int retVal = pthread_mutex_trylock(&mutexes[i*(numberCols+1)]);
-            //         if (retVal == 0) {
-            //             printf("retVal -> %d\n", retVal);
-            //         } else if (retVal == EBUSY) {
-            //             printf("EBUSY\n");
-
-            //         } else if (retVal == EINVAL){
-            //             printf("EINVAL\n");
-
-            //         } else if (retVal == EFAULT){
-            //             printf("EFAULT\n");
-            //         }
-            //     }
-            // }
         }
     }
 
-    printf("Grilla del thread id: %d:\n",num->id);
+    printf("Grilla de thread %d, GENERACIÓN 0:\n",num->id);
 
 	life_save_board(stdout, gridThread);
 
     life_compute_next_gen(gridThread);
     grid_flip(gridThread);
     
-    printf("Grilla del threadV.2 id:%d\n--------------------------\n",num->id);
-    life_save_board(stdout, gridThread);
+    // life_save_board(stdout, gridThread);
 
-    
-    if(hasRightNeighbor){
-        // ESPERA
-        //necesito saber el valor de su primera columna, del proceso a la derecha
-        //Espero por su valor
-        // for (int i = 0; i < numberRows; i++)
-        // {
-            int retVal = pthread_mutex_lock(&mutexes[(numberCols) ]);
-            printf("Mutex conseguido por {%d}\n", num->id);
-            // printf("padding-index {%d} -> %d\n", num->id, i*(numberCols) );
-            if (retVal == 0) {
-                sleep(3);
-                printf("Mutex liberado por {%d}\n", num->id);
-                pthread_mutex_unlock(&mutexes[(numberCols)]);
+    for(int z = 0; z < numGens; z++){
+
+        if(hasRightNeighbor){
+            // ESPERA
+            //necesito saber el valor de su primera columna, del proceso a la derecha
+            //Espero por su valor
+            for (int i = 0; i < numberRows; i++)
+            {
+                int retVal = pthread_mutex_lock(&mutexes[(numberCols) ]);
+                grid_set_current(grid, i, numberCols - 2,gridThread->buf1[ (i+1)*numberCols - 1]);
+                // life_save_board(stdout, grid);
+                if (retVal == 0) {
+                    life_compute_next_gen(gridThread);
+                    pthread_mutex_unlock(&mutexes[(numberCols)]);
+                }
             }
-        // }
-    }
+        }
+        // Syncro
+        if(hasLeftNeighbor){
+            //necesito saber el valor de su ultima columna, del proceso a la izquierda
+            for (int i = 0; i < numberRows; i++)
+            {
+                int retVal = pthread_mutex_lock(&mutexes[((i+1)*numberCols)]);
+                grid_set_current(grid, 0, numberCols - 2,gridThread->buf1[ (i+1)*numberCols - 1]);
+                if (retVal == 0) {
+                    life_compute_next_gen(gridThread);
+                    pthread_mutex_unlock(&mutexes[(i+1)*numberCols]);
+                }
+            }
+        }
 
-    // Syncro
-    if(hasLeftNeighbor){
-        //necesito saber el valor de su ultima columna, del proceso a la izquierda
-        // for (int i = 0; i < numberRows; i++)
-        // {
-            int retVal = pthread_mutex_lock(&mutexes[(numberCols)]);
-            // printf("padding-index {%d} -> %d\n", num->id,i*(numberCols)  );
-            printf("Mutex conseguido por {%d}\n", num->id);
-        // }
     }
+    
+    printf("ASI QUEDA: id: {%d}\n", num->id);
+    //setear valores a grilla general y salir
+    life_save_board(stdout, gridThread);
     
     pthread_exit(NULL);
 }
@@ -152,7 +121,7 @@ int main(int argc, char **argv){
 
 
 	const char *filename = argv[1];
-	int numgens = atoi(argv[2]);
+	numGens = atoi(argv[2]);
 	int N = atoi(argv[3]);  // number of rows of processes
 	int M = atoi(argv[4]);  // number of columns of processes
     
@@ -170,11 +139,6 @@ int main(int argc, char **argv){
         pthread_mutex_init(&mutexes[ii], 0);
     }
 
-	// simulation
-	// for (int i = 0; i < numgens; i++) {
-	// 	life_compute_next_gen(grid);
-	// 	grid_flip(grid);
-	// }
     int i;
     pthread_t tid[numbThreads];
 
@@ -195,12 +159,9 @@ int main(int argc, char **argv){
         arrfs->finishIndexCol = tmpFinishIndexCol;
         pthread_create(&tid[i],NULL,threadFun,(void*)arrfs);
         
-        // actualRow = tmpFinishIndexRow;
         actualCol = tmpFinishIndexCol;
     }
     for(int i = 0; i < numbThreads; i++) pthread_join(tid[i],NULL);
 
-	// print result
-	// life_save_board(stdout, grid);
     return 0;
 }
