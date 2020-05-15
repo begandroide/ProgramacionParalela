@@ -5,6 +5,7 @@
 #include "life.h"
 #include <errno.h>
 #include <stdbool.h>
+#include <string.h>
 
 typedef struct arg_struct {
     int id;
@@ -39,6 +40,7 @@ void *threadFun(void* argTh){
         //tiene vecino izquierdo
         numberCols++; //OJO tiene q ser a la izq.
         hasLeftNeighbor = true;
+        num->initialIndexCol--;
     }
     // if (num->initialIndexRow == 0){
     //     //no tiene vecinos arriba
@@ -49,58 +51,67 @@ void *threadFun(void* argTh){
     Grid* gridThread = grid_alloc(numberRows, numberCols); // sumamos padding en col
     // setear valores a grilla
     for(int i = num->initialIndexRow; i < numberRows; i++){
-        for(int j = num->initialIndexCol; j < num->finishIndexCol; j++){
-
-            if (hasRightNeighbor) {
-                printf("tiene vecino der\n");
-                if ( (j+1) == num->finishIndexCol ) {
-                    printf("padding-index: %d\n", i*(numberCols) + j +1 );
-                    int retVal = pthread_mutex_trylock(&mutexes[i*(num->finishIndexCol+1)]);
-                    if (retVal == 0) {
-                        printf("retVal -> %d\n", retVal);
-                    } else if (retVal == EBUSY) {
-                        printf("EBUSY\n");
-
-                    } else if (retVal == EINVAL){
-                        printf("EINVAL\n");
-
-                    } else if (retVal == EFAULT){
-                        printf("EFAULT\n");
-                    }
-                } else {
-                    uint8_t val = grid_get_current(grid, i, j);
-                    grid_set_current(gridThread, i, j, val);
-                }
-
-            } else if(hasLeftNeighbor) {
-                printf("tiene vecino izq\n");
-                if ( j == num->initialIndexCol) {
-                    printf("padding-index: %d\n", i*(numberCols));
-                    int retVal = pthread_mutex_trylock(&mutexes[i*(numberCols+1)]);
-                    if (retVal == 0) {
-                        printf("retVal -> %d\n", retVal);
-                    } else if (retVal == EBUSY) {
-                        printf("EBUSY\n");
-
-                    } else if (retVal == EINVAL){
-                        printf("EINVAL\n");
-
-                    } else if (retVal == EFAULT){
-                        printf("EFAULT\n");
-                    }
-                }
+        for(int j = num->initialIndexCol; j < ( num->initialIndexCol + numberCols); j++){
+            int tmpIndexJ = j - num->initialIndexCol;
+            uint8_t val = grid_get_current(grid, i, j);
+            if(strncmp((const char*)&(val), "", 1) == 0){
+                val = (uint8_t)'0';
+                printf("WARNING val null\n",val);
             }
+            
+            printf("val-> %d\n",j);
+
+            grid_set_current(gridThread, i, tmpIndexJ, val);
+            // if (hasRightNeighbor) {
+            //     printf("tiene vecino der\n");
+            //     if ( (j+1) == num->finishIndexCol ) {
+            //         printf("padding-index: %d\n", i*(numberCols) + j +1 );
+            //         int retVal = pthread_mutex_trylock(&mutexes[i*(num->finishIndexCol+1)]);
+            //         if (retVal == 0) {
+            //             printf("retVal -> %d\n", retVal);
+            //         } else if (retVal == EBUSY) {
+            //             printf("EBUSY\n");
+
+            //         } else if (retVal == EINVAL){
+            //             printf("EINVAL\n");
+
+            //         } else if (retVal == EFAULT){
+            //             printf("EFAULT\n");
+            //         }
+            //     } else {
+            //         uint8_t val = grid_get_current(grid, i, j);
+            //         grid_set_current(gridThread, i, j, val);
+            //     }
+
+            // } else if(hasLeftNeighbor) {
+            //     printf("tiene vecino izq\n");
+            //     if ( j == num->initialIndexCol) {
+            //         printf("padding-index: %d\n", i*(numberCols));
+            //         int retVal = pthread_mutex_trylock(&mutexes[i*(numberCols+1)]);
+            //         if (retVal == 0) {
+            //             printf("retVal -> %d\n", retVal);
+            //         } else if (retVal == EBUSY) {
+            //             printf("EBUSY\n");
+
+            //         } else if (retVal == EINVAL){
+            //             printf("EINVAL\n");
+
+            //         } else if (retVal == EFAULT){
+            //             printf("EFAULT\n");
+            //         }
+            //     }
+            // }
 
 
         }
     }
 
-    // printf("Grilla del thread:\n--------------------------\n");
+    printf("Grilla del thread id: %d:\n",num->id);
 
-	// life_save_board(stdout, gridThread);
+	life_save_board(stdout, gridThread);
 
-    life_compute_next_gen(gridThread);
-    grid_flip(gridThread);
+    // life_compute_next_gen(gridThread);
+    // grid_flip(gridThread);
     
     // printf("Grilla del threadV.2:\n--------------------------\n");
     // // life_save_board(stdout, gridThread);
