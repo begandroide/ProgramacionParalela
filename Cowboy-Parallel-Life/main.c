@@ -58,8 +58,6 @@ void *threadFun(void* argTh){
                 val = (uint8_t)'0';
                 printf("WARNING val null\n",val);
             }
-            
-            printf("val-> %d\n",j);
 
             grid_set_current(gridThread, i, tmpIndexJ, val);
             // if (hasRightNeighbor) {
@@ -101,8 +99,6 @@ void *threadFun(void* argTh){
             //         }
             //     }
             // }
-
-
         }
     }
 
@@ -110,12 +106,41 @@ void *threadFun(void* argTh){
 
 	life_save_board(stdout, gridThread);
 
-    // life_compute_next_gen(gridThread);
-    // grid_flip(gridThread);
+    life_compute_next_gen(gridThread);
+    grid_flip(gridThread);
     
-    // printf("Grilla del threadV.2:\n--------------------------\n");
-    // // life_save_board(stdout, gridThread);
+    printf("Grilla del threadV.2 id:%d\n--------------------------\n",num->id);
+    life_save_board(stdout, gridThread);
 
+    
+    if(hasRightNeighbor){
+        // ESPERA
+        //necesito saber el valor de su primera columna, del proceso a la derecha
+        //Espero por su valor
+        // for (int i = 0; i < numberRows; i++)
+        // {
+            int retVal = pthread_mutex_lock(&mutexes[(numberCols) ]);
+            printf("Mutex conseguido por {%d}\n", num->id);
+            // printf("padding-index {%d} -> %d\n", num->id, i*(numberCols) );
+            if (retVal == 0) {
+                sleep(3);
+                printf("Mutex liberado por {%d}\n", num->id);
+                pthread_mutex_unlock(&mutexes[(numberCols)]);
+            }
+        // }
+    }
+
+    // Syncro
+    if(hasLeftNeighbor){
+        //necesito saber el valor de su ultima columna, del proceso a la izquierda
+        // for (int i = 0; i < numberRows; i++)
+        // {
+            int retVal = pthread_mutex_lock(&mutexes[(numberCols)]);
+            // printf("padding-index {%d} -> %d\n", num->id,i*(numberCols)  );
+            printf("Mutex conseguido por {%d}\n", num->id);
+        // }
+    }
+    
     pthread_exit(NULL);
 }
 
